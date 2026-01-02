@@ -1,0 +1,14 @@
+{
+  "name": "claude-code-voice-agent",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Experimental voice interface prototype for Claude Code",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0"
+  }
+}
