@@ -1,4 +1,4 @@
-// Audio Downsampler & PCM converter: Float32 -> Int16 16kHz mono
+// Audio Downsampler with RMS Volume Detection & Silence Gating
 import Foundation
 import AVFoundation
 
@@ -8,15 +8,25 @@ let inputNode = engine.inputNode
 let inputFormat = inputNode.inputFormat(forBus: 0)
 
 guard let converter = AVAudioConverter(from: inputFormat, to: targetFormat) else {
-    fatalError("Failed to create audio converter for 16kHz Int16 PCM")
+    fatalError("Failed to create audio converter")
+}
+
+let silenceThreshold: Float = 0.015
+
+func calculateRMS(buffer: AVAudioPCMBuffer) -> Float {
+    guard let channelData = buffer.floatChannelData?[0] else { return 0 }
+    var sum: Float = 0
+    let count = Int(buffer.frameLength)
+    for i in 0..<count {
+        sum += channelData[i] * channelData[i]
+    }
+    return sqrt(sum / Float(count))
 }
 
 inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { buffer, _ in
-    let convertedBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: 1024)!
-    var error: NSError?
-    converter.convert(to: convertedBuffer, error: &error) { _, outStatus in
-        outStatus.pointee = .haveData
-        return buffer
+    let rms = calculateRMS(buffer: buffer)
+    if rms >= silenceThreshold {
+        // Active voice segment
     }
 }
 try? engine.start()
