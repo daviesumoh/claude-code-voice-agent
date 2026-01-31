@@ -8,16 +8,20 @@ export interface STTCallbacks {
 export class DeepgramSTTClient {
   private ws: WebSocket | null = null;
   private apiKey: string;
+  private keepAliveTimer: NodeJS.Timeout | null = null;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
   }
 
   connect(callbacks: STTCallbacks) {
-    // Deepgram Nova-2 real-time STT endpoint
     const url = 'wss://api.deepgram.com/v1/listen?model=nova-2&encoding=linear16&sample_rate=16000&channels=1';
     this.ws = new WebSocket(url, {
       headers: { Authorization: `Token ${this.apiKey}` }
+    });
+
+    this.ws.on('open', () => {
+      this.startKeepAlive();
     });
 
     this.ws.on('message', (data) => {
@@ -32,7 +36,25 @@ export class DeepgramSTTClient {
       }
     });
 
+    this.ws.on('close', () => this.stopKeepAlive());
     this.ws.on('error', (err) => callbacks.onError(err));
+  }
+
+  private startKeepAlive() {
+    this.stopKeepAlive();
+    this.keepAliveTimer = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        // Deepgram requires KeepAlive as a text JSON frame
+        this.ws.send(JSON.stringify({ type: 'KeepAlive' }));
+      }
+    }, 4500);
+  }
+
+  private stopKeepAlive() {
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
+      this.keepAliveTimer = null;
+    }
   }
 
   sendAudio(chunk: Buffer) {
@@ -42,6 +64,7 @@ export class DeepgramSTTClient {
   }
 
   close() {
+    this.stopKeepAlive();
     this.ws?.close();
   }
 }
