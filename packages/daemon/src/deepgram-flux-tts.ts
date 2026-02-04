@@ -16,7 +16,6 @@ export class DeepgramTTSClient {
   }
 
   speak(text: string, callbacks: TTSCallbacks) {
-    // Deepgram Aura TTS endpoint
     const url = `https://api.deepgram.com/v1/speak?model=${this.voice}&encoding=linear16&sample_rate=24000`;
     fetch(url, {
       method: 'POST',
@@ -26,7 +25,7 @@ export class DeepgramTTSClient {
       },
       body: JSON.stringify({ text })
     }).then(async (res) => {
-      if (!res.ok) throw new Error(`TTS failed with status ${res.status}`);
+      if (!res.ok) throw new Error(`TTS request failed with ${res.status}`);
       const reader = res.body?.getReader();
       if (!reader) return;
       while (true) {
