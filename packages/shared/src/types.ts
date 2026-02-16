@@ -17,3 +17,15 @@ export interface VoiceConfig {
   inputMode: 'ACTIVE_CHAT' | 'STANDALONE_VOICE';
   port: number;
 }
+
+export interface RuntimeState {
+  token: string;
+  port: number;
+  pid: number;
+  startedAt: string;
+}
+
+export type ClientToDaemonMessage =
+  | { type: 'ping' }
+  | { type: 'set_input_mode'; mode: 'ACTIVE_CHAT' | 'STANDALONE_VOICE' }
+  | { type: 'set_mute'; muted: boolean };
