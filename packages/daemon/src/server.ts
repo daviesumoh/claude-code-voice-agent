@@ -24,14 +24,15 @@ export class VoiceServer {
 
       this.wss = new WebSocketServer({ server: this.server });
       this.wss.on('connection', (ws) => {
-        console.log('[Server] Client connected');
-        ws.on('message', (data) => {
-          // Process client messages
+        ws.on('message', (data, isBinary) => {
+          if (isBinary && Buffer.isBuffer(data)) {
+            // Forward PCM audio frame to STT pipeline
+          }
         });
       });
 
       this.server.listen(this.port, '127.0.0.1', () => {
-        console.log(`[Voice Daemon] Listening on http://127.0.0.1:${this.port}`);
+        console.log(`[Voice Daemon] Listening on 127.0.0.1:${this.port}`);
         resolve();
       });
     });
