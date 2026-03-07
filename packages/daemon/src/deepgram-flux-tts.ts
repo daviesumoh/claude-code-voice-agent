@@ -15,25 +15,37 @@ export class DeepgramTTSClient {
     this.voice = voice;
   }
 
-  speak(text: string, callbacks: TTSCallbacks) {
-    const url = `https://api.deepgram.com/v1/speak?model=${this.voice}&encoding=linear16&sample_rate=24000`;
-    fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Token ${this.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ text })
-    }).then(async (res) => {
-      if (!res.ok) throw new Error(`TTS request failed with ${res.status}`);
-      const reader = res.body?.getReader();
-      if (!reader) return;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) callbacks.onAudioChunk(Buffer.from(value));
+  // Split text into streamable sentences for lower latency
+  splitSentences(text: string): string[] {
+    return text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g) || [text];
+  }
+
+  async speak(text: string, callbacks: TTSCallbacks) {
+    const sentences = this.splitSentences(text);
+    for (const sentence of sentences) {
+      if (!sentence.trim()) continue;
+      const url = `https://api.deepgram.com/v1/speak?model=${this.voice}&encoding=linear16&sample_rate=24000`;
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Token ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ text: sentence.trim() })
+        });
+        if (!res.ok) throw new Error(`TTS failed with status ${res.status}`);
+        const reader = res.body?.getReader();
+        if (!reader) continue;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) callbacks.onAudioChunk(Buffer.from(value));
+        }
+      } catch (err: any) {
+        callbacks.onError(err);
       }
-      callbacks.onComplete();
-    }).catch(err => callbacks.onError(err));
+    }
+    callbacks.onComplete();
   }
 }
