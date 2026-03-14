@@ -1,19 +1,10 @@
 {
   "name": "claude-code-voice-agent",
   "private": true,
-  "version": "0.0.2",
-  "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/packages/daemon/src/index.js",
-    "dev": "tsc -w"
-  },
-  "dependencies": {
-    "ws": "^8.16.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.4.2",
-    "@types/node": "^20.11.24",
-    "@types/ws": "^8.5.10"
+    "build": "pnpm -r run build",
+    "daemon": "pnpm --filter @claude-voice/daemon start",
+    "test": "node packages/daemon/test/run-test.js"
   }
 }
