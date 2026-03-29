@@ -1,16 +1,71 @@
-// Procedural Earcon Synthesizer: Sine wave chimes generated in real-time
-export class EarconSynthesizer {
-  generateTone(frequency: number, durationMs: number, sampleRate = 24000): Buffer {
-    const totalSamples = Math.floor((durationMs / 1000) * sampleRate);
-    const buffer = Buffer.alloc(totalSamples * 2); // 16-bit PCM
+import type { EarconType } from '@claude-voice/shared';
 
-    for (let i = 0; i < totalSamples; i++) {
-      const t = i / sampleRate;
-      const envelope = Math.sin((Math.PI * i) / totalSamples); // Smooth sine window
-      const sample = Math.sin(2 * Math.PI * frequency * t) * envelope * 0.3;
-      const intSample = Math.floor(sample * 32767);
-      buffer.writeInt16LE(intSample, i * 2);
+export class EarconPolicy {
+  private lastEditTickTimestamp = 0;
+  private lastFailTapTimestamp = 0;
+  private readonly editCooldownMs = 12000; // 12 seconds
+  private readonly failCooldownMs = 15000; // 15 seconds
+  private enabled = true;
+
+  constructor(enabled = true) {
+    this.enabled = enabled;
+  }
+
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+  }
+
+  /**
+   * Evaluates whether a tool call should trigger a subtle earcon.
+   * Enforces strict silence for routine read/grep/glob/thinking.
+   */
+  onToolUse(toolName: string): EarconType | null {
+    if (!this.enabled) return null;
+
+    const lower = toolName.toLowerCase();
+
+    // Code mutations: Edit, Write, MultiEdit, Replace
+    if (lower.includes('edit') || lower.includes('write') || lower.includes('patch')) {
+      const now = Date.now();
+      if (now - this.lastEditTickTimestamp >= this.editCooldownMs) {
+        this.lastEditTickTimestamp = now;
+        return 'EDIT_TICK';
+      }
     }
-    return buffer;
+
+    // All reading, listing, searching is strictly silent
+    return null;
+  }
+
+  /**
+   * Evaluates whether a tool failure should trigger an earcon.
+   */
+  onToolFailure(toolName: string): EarconType | null {
+    if (!this.enabled) return null;
+
+    const now = Date.now();
+    if (now - this.lastFailTapTimestamp >= this.failCooldownMs) {
+      this.lastFailTapTimestamp = now;
+      return 'FAIL_TAP';
+    }
+
+    return null;
+  }
+
+  /**
+   * Triggered when Claude Code is asking a question or requesting permission.
+   */
+  onPrompt(): EarconType | null {
+    if (!this.enabled) return null;
+    return 'CHIME_PROMPT';
+  }
+
+  /**
+   * Triggered when Claude completes a turn that was purely visual (no spoken text).
+   */
+  onVisualCompletion(): EarconType | null {
+    if (!this.enabled) return null;
+    return 'CHIME_SUCCESS';
   }
 }
+
