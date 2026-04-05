@@ -5,9 +5,14 @@ export class VoiceServer {
   private port: number;
   private server: http.Server | null = null;
   private wss: WebSocketServer | null = null;
+  private isSpeaking = false;
 
   constructor(port = 4545) {
     this.port = port;
+  }
+
+  setSpeakingState(speaking: boolean) {
+    this.isSpeaking = speaking;
   }
 
   start(): Promise<void> {
@@ -15,7 +20,7 @@ export class VoiceServer {
       this.server = http.createServer((req, res) => {
         if (req.url === '/health') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ status: 'ok' }));
+          res.end(JSON.stringify({ status: 'ok', isSpeaking: this.isSpeaking }));
           return;
         }
         res.writeHead(404);
@@ -25,8 +30,9 @@ export class VoiceServer {
       this.wss = new WebSocketServer({ server: this.server });
       this.wss.on('connection', (ws) => {
         ws.on('message', (data, isBinary) => {
-          if (isBinary && Buffer.isBuffer(data)) {
-            // Forward PCM audio frame to STT pipeline
+          // Acoustic echo ducking: ignore microphone input while assistant is speaking
+          if (isBinary && this.isSpeaking) {
+            return;
           }
         });
       });
