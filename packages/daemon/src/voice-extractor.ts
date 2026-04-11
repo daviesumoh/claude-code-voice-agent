@@ -10,6 +10,13 @@ export function stripMarkdownFormatting(text: string): string {
     .trim();
 }
 
+export function normalizeSlashCommands(text: string): string {
+  // Normalize spoken commands like "slash plan" -> "/plan"
+  return text
+    .replace(/^(?:slash|forward\s+slash)\s+([a-z0-9_-]+)/i, '/$1')
+    .replace(/\b(?:slash|forward\s+slash)\s+([a-z0-9_-]+)/gi, '/$1');
+}
+
 export function extractVoiceTags(rawText: string): { speechText: string; hasExplicitVoiceTag: boolean } {
   const voiceTagRegex = /<voice(?:\s+[^>]*)?>([\s\S]*?)<\/voice>/gi;
   const matches: string[] = [];
@@ -25,7 +32,6 @@ export function extractVoiceTags(rawText: string): { speechText: string; hasExpl
     return { speechText: stripMarkdownFormatting(matches.join(' ')), hasExplicitVoiceTag: true };
   }
 
-  // Fallback: Check for unclosed <voice> tag during real-time streaming
   const unclosedMatch = rawText.match(/<voice(?:\s+[^>]*)?>([\s\S]*)$/i);
   if (unclosedMatch && unclosedMatch[1].trim()) {
     return { speechText: stripMarkdownFormatting(unclosedMatch[1].trim()), hasExplicitVoiceTag: true };
