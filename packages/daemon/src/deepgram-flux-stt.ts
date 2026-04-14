@@ -1,70 +1,29 @@
 import WebSocket from 'ws';
 
-export interface STTCallbacks {
-  onTranscript: (text: string, isFinal: boolean) => void;
-  onError: (error: Error) => void;
+export function calculateBackoff(attempt: number, baseMs = 500, maxMs = 5000): number {
+  return Math.min(baseMs * Math.pow(2, attempt), maxMs);
 }
 
 export class DeepgramSTTClient {
   private ws: WebSocket | null = null;
   private apiKey: string;
-  private keepAliveTimer: NodeJS.Timeout | null = null;
+  private retryCount = 0;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
   }
 
-  connect(callbacks: STTCallbacks) {
+  connect() {
     const url = 'wss://api.deepgram.com/v1/listen?model=nova-2&encoding=linear16&sample_rate=16000&channels=1';
     this.ws = new WebSocket(url, {
       headers: { Authorization: `Token ${this.apiKey}` }
     });
-
     this.ws.on('open', () => {
-      this.startKeepAlive();
+      this.retryCount = 0;
     });
-
-    this.ws.on('message', (data) => {
-      try {
-        const msg = JSON.parse(data.toString());
-        const alt = msg.channel?.alternatives?.[0];
-        if (alt?.transcript) {
-          callbacks.onTranscript(alt.transcript, Boolean(msg.is_final));
-        }
-      } catch (err: any) {
-        callbacks.onError(err);
-      }
+    this.ws.on('close', () => {
+      const delay = calculateBackoff(this.retryCount++);
+      setTimeout(() => this.connect(), delay);
     });
-
-    this.ws.on('close', () => this.stopKeepAlive());
-    this.ws.on('error', (err) => callbacks.onError(err));
-  }
-
-  private startKeepAlive() {
-    this.stopKeepAlive();
-    this.keepAliveTimer = setInterval(() => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        // Deepgram requires KeepAlive as a text JSON frame
-        this.ws.send(JSON.stringify({ type: 'KeepAlive' }));
-      }
-    }, 4500);
-  }
-
-  private stopKeepAlive() {
-    if (this.keepAliveTimer) {
-      clearInterval(this.keepAliveTimer);
-      this.keepAliveTimer = null;
-    }
-  }
-
-  sendAudio(chunk: Buffer) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(chunk);
-    }
-  }
-
-  close() {
-    this.stopKeepAlive();
-    this.ws?.close();
   }
 }
