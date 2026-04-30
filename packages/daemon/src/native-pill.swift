@@ -13,7 +13,12 @@ class FloatingPillWindow: NSPanel {
         self.isOpaque = false
         self.backgroundColor = .clear
         self.level = .floating
+        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        self.isMovableByWindowBackground = true
     }
+    
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
