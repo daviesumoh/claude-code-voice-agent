@@ -3,6 +3,8 @@ import Foundation
 import AVFoundation
 
 class FloatingPillWindow: NSPanel {
+    var initialLocation: NSPoint = .zero
+
     init() {
         super.init(
             contentRect: NSRect(x: 200, y: 200, width: 140, height: 42),
@@ -14,11 +16,22 @@ class FloatingPillWindow: NSPanel {
         self.backgroundColor = .clear
         self.level = .floating
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        self.isMovableByWindowBackground = true
     }
     
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+
+    override func mouseDown(with event: NSEvent) {
+        initialLocation = event.locationInWindow
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        var newOrigin = self.frame.origin
+        let currentLocation = event.locationInWindow
+        newOrigin.x += (currentLocation.x - initialLocation.x)
+        newOrigin.y += (currentLocation.y - initialLocation.y)
+        self.setFrameOrigin(newOrigin)
+    }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
