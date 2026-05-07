@@ -2,47 +2,31 @@ import Cocoa
 import Foundation
 import AVFoundation
 
-class FloatingPillWindow: NSPanel {
-    var initialLocation: NSPoint = .zero
+class AudioCaptureManager {
+    let engine = AVAudioEngine()
+    let targetFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: false)!
+    var onPCMData: ((Data) -> Void)?
 
-    init() {
-        super.init(
-            contentRect: NSRect(x: 200, y: 200, width: 140, height: 42),
-            styleMask: [.nonactivatingPanel, .borderless],
-            backing: .buffered,
-            defer: false
-        )
-        self.isOpaque = false
-        self.backgroundColor = .clear
-        self.level = .floating
-        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-    }
-    
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
+    func start() throws {
+        let inputNode = engine.inputNode
+        let inputFormat = inputNode.inputFormat(forBus: 0)
+        guard let converter = AVAudioConverter(from: inputFormat, to: targetFormat) else {
+            fatalError("Cannot create 16kHz converter")
+        }
 
-    override func mouseDown(with event: NSEvent) {
-        initialLocation = event.locationInWindow
-    }
-
-    override func mouseDragged(with event: NSEvent) {
-        var newOrigin = self.frame.origin
-        let currentLocation = event.locationInWindow
-        newOrigin.x += (currentLocation.x - initialLocation.x)
-        newOrigin.y += (currentLocation.y - initialLocation.y)
-        self.setFrameOrigin(newOrigin)
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
+            guard let self = self else { return }
+            let convertedBuffer = AVAudioPCMBuffer(pcmFormat: self.targetFormat, frameCapacity: 1024)!
+            var error: NSError?
+            converter.convert(to: convertedBuffer, error: &error) { _, outStatus in
+                outStatus.pointee = .haveData
+                return buffer
+            }
+            if let channelData = convertedBuffer.int16ChannelData?[0] {
+                let bytes = Data(bytes: channelData, count: Int(convertedBuffer.frameLength) * 2)
+                self.onPCMData?(bytes)
+            }
+        }
+        try engine.start()
     }
 }
-
-class AppDelegate: NSObject, NSApplicationDelegate {
-    var window: FloatingPillWindow?
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        window = FloatingPillWindow()
-        window?.makeKeyAndOrderFront(nil)
-    }
-}
-
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
-app.run()
