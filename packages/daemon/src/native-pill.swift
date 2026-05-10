@@ -2,31 +2,28 @@ import Cocoa
 import Foundation
 import AVFoundation
 
-class AudioCaptureManager {
-    let engine = AVAudioEngine()
-    let targetFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: false)!
-    var onPCMData: ((Data) -> Void)?
+class WaveformView: NSView {
+    var audioLevel: CGFloat = 0.0
+    var phase: CGFloat = 0.0
+    private var timer: Timer?
 
-    func start() throws {
-        let inputNode = engine.inputNode
-        let inputFormat = inputNode.inputFormat(forBus: 0)
-        guard let converter = AVAudioConverter(from: inputFormat, to: targetFormat) else {
-            fatalError("Cannot create 16kHz converter")
-        }
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        startAnimation()
+    }
+    required init?(coder: NSCoder) { super.init(coder: coder) }
 
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
+    func startAnimation() {
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            let convertedBuffer = AVAudioPCMBuffer(pcmFormat: self.targetFormat, frameCapacity: 1024)!
-            var error: NSError?
-            converter.convert(to: convertedBuffer, error: &error) { _, outStatus in
-                outStatus.pointee = .haveData
-                return buffer
-            }
-            if let channelData = convertedBuffer.int16ChannelData?[0] {
-                let bytes = Data(bytes: channelData, count: Int(convertedBuffer.frameLength) * 2)
-                self.onPCMData?(bytes)
-            }
+            self.phase += 0.15
+            self.needsDisplay = true
         }
-        try engine.start()
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let path = NSBezierPath(roundedRect: bounds, xRadius: bounds.height / 2, yRadius: bounds.height / 2)
+        NSColor(calibratedRed: 0.12, green: 0.12, blue: 0.14, alpha: 0.92).setFill()
+        path.fill()
     }
 }
