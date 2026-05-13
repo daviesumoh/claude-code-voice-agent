@@ -2,28 +2,18 @@ import Cocoa
 import Foundation
 import AVFoundation
 
-class WaveformView: NSView {
-    var audioLevel: CGFloat = 0.0
-    var phase: CGFloat = 0.0
-    private var timer: Timer?
+enum PillVisualState: String {
+    case idle = "IDLE"
+    case listening = "LISTENING"
+    case thinking = "THINKING"
+    case speaking = "SPEAKING"
 
-    override init(frame: NSRect) {
-        super.init(frame: frame)
-        startAnimation()
-    }
-    required init?(coder: NSCoder) { super.init(coder: coder) }
-
-    func startAnimation() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            self.phase += 0.15
-            self.needsDisplay = true
+    var accentColor: NSColor {
+        switch self {
+        case .idle: return NSColor(calibratedRed: 0.85, green: 0.55, blue: 0.25, alpha: 0.4)
+        case .listening: return NSColor(calibratedRed: 0.95, green: 0.60, blue: 0.20, alpha: 1.0)
+        case .thinking: return NSColor(calibratedRed: 0.40, green: 0.70, blue: 0.95, alpha: 1.0)
+        case .speaking: return NSColor(calibratedRed: 0.95, green: 0.45, blue: 0.25, alpha: 1.0)
         }
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        let path = NSBezierPath(roundedRect: bounds, xRadius: bounds.height / 2, yRadius: bounds.height / 2)
-        NSColor(calibratedRed: 0.12, green: 0.12, blue: 0.14, alpha: 0.92).setFill()
-        path.fill()
     }
 }
