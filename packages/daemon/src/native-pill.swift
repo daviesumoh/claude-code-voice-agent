@@ -2,14 +2,13 @@ import Cocoa
 import Foundation
 import AVFoundation
 
-class PillMenuHelper {
-    static func createMenu() -> NSMenu {
-        let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Toggle Mute", action: #selector(handleMute), keyEquivalent: "m"))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit Claude Voice", action: #selector(handleQuit), keyEquivalent: "q"))
-        return menu
+class DaemonWebSocketClient {
+    private var webSocketTask: URLSessionWebSocketTask?
+
+    func connect(port: Int = 4545, token: String) {
+        guard let url = URL(string: "ws://127.0.0.1:\(port)/ws?token=\(token)") else { return }
+        let session = URLSession(configuration: .default)
+        webSocketTask = session.webSocketTask(with: url)
+        webSocketTask?.resume()
     }
-    @objc static func handleMute() {}
-    @objc static func handleQuit() { NSApplication.shared.terminate(nil) }
 }
