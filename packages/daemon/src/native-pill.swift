@@ -2,13 +2,23 @@ import Cocoa
 import Foundation
 import AVFoundation
 
-class DaemonWebSocketClient {
-    private var webSocketTask: URLSessionWebSocketTask?
+struct PillPosition: Codable {
+    let x: Double
+    let y: Double
+}
 
-    func connect(port: Int = 4545, token: String) {
-        guard let url = URL(string: "ws://127.0.0.1:\(port)/ws?token=\(token)") else { return }
-        let session = URLSession(configuration: .default)
-        webSocketTask = session.webSocketTask(with: url)
-        webSocketTask?.resume()
+class PositionStorage {
+    static let fileURL: URL = {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let dir = home.appendingPathComponent(".claude-voice")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("pill-position.json")
+    }()
+
+    static func save(point: NSPoint) {
+        let pos = PillPosition(x: Double(point.x), y: Double(point.y))
+        if let data = try? JSONEncoder().encode(pos) {
+            try? data.write(to: fileURL)
+        }
     }
 }
