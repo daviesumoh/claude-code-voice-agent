@@ -4,7 +4,9 @@
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "build": "pnpm -r run build",
+    "build:pill": "pnpm --filter @claude-voice/daemon build:pill",
     "daemon": "pnpm --filter @claude-voice/daemon start",
+    "pill": "pnpm --filter @claude-voice/daemon pill",
     "test": "node packages/daemon/test/run-test.js"
   }
 }
