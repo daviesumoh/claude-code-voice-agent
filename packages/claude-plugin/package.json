@@ -1,0 +1,19 @@
+{
+  "name": "@claude-voice/claude-plugin",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "install-hooks": "node ./dist/install.js",
+    "uninstall-hooks": "node ./dist/uninstall.js"
+  },
+  "dependencies": {
+    "@claude-voice/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.4"
+  }
+}
+
