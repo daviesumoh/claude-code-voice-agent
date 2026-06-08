@@ -1,0 +1,45 @@
+{
+  "name": "claude-voice",
+  "version": "0.1.0",
+  "description": "Bidirectional real-time voice conversation layer for Claude Code powered by Deepgram Flux",
+  "author": "Davies",
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/hook-dispatcher.js SessionStart"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/hook-dispatcher.js UserPromptSubmit"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/hook-dispatcher.js PreToolUse"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/hook-dispatcher.js PostToolUse"
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "type": "command",
+        "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/hook-dispatcher.js PermissionRequest"
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/hook-dispatcher.js Stop"
+      }
+    ]
+  }
+}
+
