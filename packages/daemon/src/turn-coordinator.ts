@@ -487,7 +487,7 @@ export class TurnCoordinator extends EventEmitter {
     // Check if Claude Code is asking a clarifying or /plan question!
     if (toolName === 'AskUserQuestion') {
       const questions = payload.tool_input?.questions as any[];
-      let questionText = 'Claude Code has a question.';
+      let questionText = 'Claude Code has a question for you.';
       if (Array.isArray(questions) && questions.length > 0) {
         questionText = questions[0].question || questionText;
         if (Array.isArray(questions[0].options) && questions[0].options.length > 0) {
