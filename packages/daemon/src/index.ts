@@ -1,19 +1,35 @@
-import { DeepgramSTTClient } from './deepgram-flux-stt.js';
-import { injectTextToTerminal } from './os-injector.js';
+import { VoiceDaemonServer } from './server.js';
+import { loadConfig } from './config.js';
+import { launchPillWindow } from './launcher.js';
 
-console.log('[Claude Voice] Starting early prototype loop...');
-const apiKey = process.env.DEEPGRAM_API_KEY || '';
-if (!apiKey) {
-  console.warn('DEEPGRAM_API_KEY is not set');
+async function main() {
+  const config = loadConfig();
+
+  if (!config.deepgramApiKey) {
+    console.warn('\n⚠️  Deepgram API Key not found!');
+    console.warn('Set it in ~/.claude-voice/config.json ("deepgramApiKey": "...") or DEEPGRAM_API_KEY environment variable.\n');
+  }
+
+  const daemon = new VoiceDaemonServer(config);
+
+  const shutdown = () => {
+    daemon.stop();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+
+  try {
+    await daemon.start();
+    if (process.env.NO_PILL !== '1') {
+      await launchPillWindow(config.port || 4545);
+    }
+  } catch (err: any) {
+    console.error('[Claude Voice Daemon] Fatal error starting server:', err.message);
+    process.exit(1);
+  }
 }
 
-const stt = new DeepgramSTTClient(apiKey);
-stt.connect({
-  onTranscript: (text, isFinal) => {
-    console.log(`[STT] ${isFinal ? '(FINAL)' : '(interim)'}: ${text}`);
-    if (isFinal && text.trim().length > 0) {
-      injectTextToTerminal(text.trim());
-    }
-  },
-  onError: (err) => console.error('[STT Error]', err)
-});
+main();
+

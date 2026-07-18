@@ -81,5 +81,3 @@ export class SymbolIndexer {
   }
 }
 
-
-// In-memory identifier index cache for fast STT keyterm boosting
