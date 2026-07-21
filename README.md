@@ -1,9 +1,15 @@
-# Claude Code Voice Agent (Prototype)
+# Claude Code Voice Agent
 
-An experimental real-time voice interface prototype for Claude Code.
+A low-latency, full-duplex conversational voice layer for the Claude Code CLI and Terminal.
 
-## Architecture Notes
-- Native macOS microphone capture using `AVAudioEngine`
-- Speech-to-text via Deepgram Nova-2
-- Speech synthesis via Deepgram Aura
-- Terminal keystroke injection via AppleScript System Events
+## Claude Code Plugin Hooks
+Run the automated installer to connect voice hooks into `~/.claude/settings.json`:
+```bash
+pnpm install-hooks
+```
+
+Supported events:
+- `SessionStart`: Initializes voice session and state
+- `UserPromptSubmit`: Synchronizes user inputs
+- `PostToolUse`: Contextual feedback and tool execution status
+- `Stop`: Assistant speech finalization
