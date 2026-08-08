@@ -309,3 +309,5 @@ export class DeepgramFluxSTT extends EventEmitter {
     this.isConnected = false;
   }
 }
+
+// Flux STT supports dynamic threshold reconfiguration via Configure message
