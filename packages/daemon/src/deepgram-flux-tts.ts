@@ -329,3 +329,5 @@ export class DeepgramFluxTTS extends EventEmitter {
     this.isSpeaking = false;
   }
 }
+
+// Reconciles text_spoken on SpeechInterrupted for seamless conversational barge-in
