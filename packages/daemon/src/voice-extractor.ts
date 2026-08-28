@@ -157,3 +157,5 @@ export function normalizeSpokenSlashCommands(text: string): string {
   return normalized;
 }
 
+
+// Technical acronym pronunciation dictionary for high-fidelity TTS
