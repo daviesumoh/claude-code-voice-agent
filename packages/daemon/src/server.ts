@@ -326,3 +326,5 @@ export class VoiceDaemonServer {
     console.log('[Claude Voice Daemon] Stopped cleanly.');
   }
 }
+
+// Ensure active chat submission prevents concurrent standalone stream
