@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Voice</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Draggable Window Handle */
+    .widget-container {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-app-region: drag; /* Allows moving native window */
+      cursor: grab;
+    }
+
+    .widget-container:active {
+      cursor: grabbing;
+    }
+
+    /* The Claude Icon Bubble */
+    .claude-bubble {
+      -webkit-app-region: no-drag; /* Click events on the button */
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(26, 26, 30, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s ease, background 0.2s, box-shadow 0.2s;
+    }
+
+    .claude-bubble:hover {
+      transform: scale(1.08);
+      background: rgba(34, 34, 40, 0.98);
+      border-color: rgba(217, 119, 6, 0.4);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(217, 119, 6, 0.3);
+    }
+
+    .claude-bubble:active {
+      transform: scale(0.96);
+    }
+
+    /* Claude Spark SVG Icon */
+    .claude-spark {
+      width: 24px;
+      height: 24px;
+      color: #da7756; /* Official Claude terracotta */
+      transition: color 0.2s, transform 0.2s;
+      fill: currentColor;
+    }
+
+    /* Pulsing Halo Ring */
+    .pulse-ring {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    /* STATE: LISTENING (Blue/Cyan Pulse) */
+    .state-listening .pulse-ring {
+      opacity: 1;
+      border: 2px solid #38bdf8;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.6);
+      animation: pulse 1.4s infinite ease-out;
+    }
+
+    .state-listening .claude-bubble {
+      border-color: #38bdf8;
+    }
+
+    .state-listening .claude-spark {
+      color: #38bdf8;
+      transform: scale(1.1);
+    }
+
+    /* STATE: THINKING (Gentle Amber Breathing) */
+    .state-thinking .pulse-ring {
+      opacity: 1;
+      border: 2px solid #f59e0b;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.5);
+      animation: breathe 1.2s infinite ease-in-out;
+    }
+
+    .state-thinking .claude-spark {
+      color: #f59e0b;
+    }
+
+    /* STATE: SPEAKING (Claude Talking - Warm Amber Pulse) */
+    .state-speaking .pulse-ring {
+      opacity: 1;
+      border: 2px solid #ea580c;
+      box-shadow: 0 0 18px rgba(234, 88, 12, 0.7);
+      animation: pulse 0.9s infinite ease-out;
+    }
+
+    .state-speaking .claude-spark {
+      color: #ff8c42;
+      animation: bounce 0.6s infinite alternate ease-in-out;
+    }
+
+    /* Tiny Status Indicator Dot */
+    .status-pip {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981; /* Green when connected */
+      border: 1.5px solid #1a1a1e;
+      transition: background 0.2s;
+    }
+
+    .status-pip.disconnected {
+      background: #ef4444; /* Red if disconnected */
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.9;
+      }
+      100% {
+        transform: scale(1.4);
+        opacity: 0;
+      }
+    }
+
+    @keyframes breathe {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.4;
+      }
+      50% {
+        transform: scale(1.15);
+        opacity: 0.9;
+      }
+    }
+
+    @keyframes bounce {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.12); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="widget-container" id="container">
+    <div class="pulse-ring"></div>
+    <div class="claude-bubble" id="bubble" title="Click to speak with Claude Code">
+      <div class="status-pip" id="pip"></div>
+      <!-- Anthropic Claude Spark Icon -->
+      <svg class="claude-spark" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C12.45 6.4 15.6 9.55 20 10C15.6 10.45 12.45 13.6 12 18C11.55 13.6 8.4 10.45 4 10C8.4 9.55 11.55 6.4 12 2Z" />
+        <path d="M16.5 4.5C16.8 6.5 18.5 8.2 20.5 8.5C18.5 8.8 16.8 10.5 16.5 12.5C16.2 10.5 14.5 8.8 12.5 8.5C14.5 8.2 16.2 6.5 16.5 4.5Z" opacity="0.6"/>
+        <path d="M7.5 13.5C7.8 15.5 9.5 17.2 11.5 17.5C9.5 17.8 7.8 19.5 7.5 21.5C7.2 19.5 5.5 17.8 3.5 17.5C5.5 17.2 7.2 15.5 7.5 13.5Z" opacity="0.6"/>
+      </svg>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    let audioCtx = null;
+    let micStream = null;
+    let micSource = null;
+    let processorNode = null;
+    let isListening = false;
+    let currentState = 'IDLE';
+
+    // Playback state
+    let scheduledEndTime = 0;
+
+    const container = document.getElementById('container');
+    const bubble = document.getElementById('bubble');
+    const pip = document.getElementById('pip');
+
+    // WebAudio Procedural Earcons
+    function playEarcon(type) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+
+      if (type === 'EDIT_TICK') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.045);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.045);
+      } else if (type === 'FAIL_TAP') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(180, now);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.07);
+      } else if (type === 'CHIME_PROMPT') {
+        playTone(1046.5, now, 0.08, 0.06);
+        playTone(1567.98, now + 0.06, 0.08, 0.07);
+      } else if (type === 'CHIME_SUCCESS') {
+        playTone(1318.5, now, 0.05, 0.05);
+        playTone(1661.2, now + 0.04, 0.05, 0.06);
+      }
+    }
+
+    function playTone(freq, time, duration, volume) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+      gain.gain.setValueAtTime(volume, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(time);
+      osc.stop(time + duration);
+    }
+
+    function setVisualState(state) {
+      currentState = state;
+      container.className = 'widget-container';
+
+      if (state === 'LISTENING') {
+        container.classList.add('state-listening');
+        bubble.title = 'Listening... Click to finish';
+      } else if (state === 'THINKING') {
+        container.classList.add('state-thinking');
+        bubble.title = 'Claude is thinking...';
+      } else if (state === 'SPEAKING') {
+        container.classList.add('state-speaking');
+        bubble.title = 'Claude is speaking... Click to interrupt';
+      } else {
+        bubble.title = 'Click to speak with Claude Code';
+      }
+    }
+
+    // Connect to WebSocket
+    function connectWS() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${location.host}/ws`;
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        pip.classList.remove('disconnected');
+      };
+
+      ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          playPcmChunk(event.data);
+        } else {
+          try {
+            const msg = JSON.parse(event.data);
+            handleDaemonMessage(msg);
+          } catch (err) {
+            console.error(err);
+          }
+        }
+      };
+
+      ws.onclose = () => {
+        pip.classList.add('disconnected');
+        setTimeout(connectWS, 2000);
+      };
+
+      ws.onerror = () => {
+        pip.classList.add('disconnected');
+      };
+    }
+
+    function handleDaemonMessage(msg) {
+      switch (msg.type) {
+        case 'state':
+          if (msg.state === 'INTERRUPTED') {
+            flushAudioPlayback();
+            setVisualState('LISTENING');
+          } else {
+            setVisualState(msg.state);
+            if (msg.state === 'IDLE' && isListening) {
+              stopMic();
+            }
+          }
+          break;
+
+        case 'earcon':
+          playEarcon(msg.sound);
+          break;
+      }
+    }
+
+    // Playback 24kHz linear16 PCM
+    function playPcmChunk(arrayBuffer) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      setVisualState('SPEAKING');
+
+      const sampleRate = 24000;
+      const int16Array = new Int16Array(arrayBuffer);
+      const float32Array = new Float32Array(int16Array.length);
+
+      for (let i = 0; i < int16Array.length; i++) {
+        float32Array[i] = int16Array[i] / 32768.0;
+      }
+
+      const audioBuffer = audioCtx.createBuffer(1, float32Array.length, sampleRate);
+      audioBuffer.getChannelData(0).set(float32Array);
+
+      const source = audioCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioCtx.destination);
+
+      const currentTime = audioCtx.currentTime;
+      const startTime = Math.max(currentTime, scheduledEndTime);
+      source.start(startTime);
+      scheduledEndTime = startTime + audioBuffer.duration;
+
+      source.onended = () => {
+        if (audioCtx.currentTime >= scheduledEndTime - 0.05) {
+          setVisualState('IDLE');
+        }
+      };
+    }
+
+    function flushAudioPlayback() {
+      scheduledEndTime = 0;
+      if (audioCtx) {
+        audioCtx.suspend().then(() => audioCtx.resume());
+      }
+    }
+
+    // Microphone Capture with WebRTC Echo Cancellation
+    async function startMic() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+
+        micSource = audioCtx.createMediaStreamSource(micStream);
+        processorNode = audioCtx.createScriptProcessor(2048, 1, 1);
+
+        processorNode.onaudioprocess = (e) => {
+          if (!isListening) return;
+
+          const inputData = e.inputBuffer.getChannelData(0);
+          const inputSampleRate = audioCtx.sampleRate;
+          const targetSampleRate = 16000;
+
+          const resampled = downsampleBuffer(inputData, inputSampleRate, targetSampleRate);
+          const pcm16 = floatTo16BitPCM(resampled);
+
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(pcm16.buffer);
+          }
+        };
+
+        micSource.connect(processorNode);
+        processorNode.connect(audioCtx.destination);
+
+        isListening = true;
+        setVisualState('LISTENING');
+      } catch (err) {
+        console.error('Failed to open microphone:', err);
+        setVisualState('IDLE');
+        alert('Microphone error: ' + err.message + '\n\nIf prompted, please grant microphone permissions in System Settings > Privacy & Security > Microphone.');
+      }
+    }
+
+    function stopMic() {
+      isListening = false;
+      if (processorNode) processorNode.disconnect();
+      if (micSource) micSource.disconnect();
+      if (micStream) {
+        micStream.getTracks().forEach((t) => t.stop());
+        micStream = null;
+      }
+      setVisualState('IDLE');
+    }
+
+    function downsampleBuffer(buffer, sampleRate, outSampleRate) {
+      if (outSampleRate >= sampleRate) return buffer;
+      const ratio = sampleRate / outSampleRate;
+      const newLength = Math.round(buffer.length / ratio);
+      const result = new Float32Array(newLength);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+        let accum = 0, count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+        }
+        result[offsetResult] = count > 0 ? accum / count : buffer[offsetBuffer];
+        offsetResult++;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    function floatTo16BitPCM(input) {
+      const output = new Int16Array(input.length);
+      for (let i = 0; i < input.length; i++) {
+        const s = Math.max(-1, Math.min(1, input[i]));
+        output[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      return output;
+    }
+
+    // Click handler on the Claude bubble
+    bubble.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      // If Claude is currently speaking -> click interrupts Claude!
+      if (currentState === 'SPEAKING') {
+        flushAudioPlayback();
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'manual_interrupt' }));
+        }
+        return;
+      }
+
+      // Toggle listening
+      if (isListening) {
+        stopMic();
+      } else {
+        startMic();
+      }
+    });
+
+    connectWS();
+  </script>
+</body>
+</html>
