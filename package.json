@@ -6,7 +6,10 @@
     "build": "pnpm -r run build",
     "build:pill": "pnpm --filter @claude-voice/daemon build:pill",
     "daemon": "pnpm --filter @claude-voice/daemon start",
+    "daemon:dev": "pnpm --filter @claude-voice/daemon dev",
     "pill": "pnpm --filter @claude-voice/daemon pill",
-    "test": "node packages/daemon/test/run-test.js"
+    "test": "pnpm -r run test",
+    "install-hooks": "pnpm --filter @claude-voice/claude-plugin run install-hooks",
+    "uninstall-hooks": "pnpm --filter @claude-voice/claude-plugin run uninstall-hooks"
   }
 }
